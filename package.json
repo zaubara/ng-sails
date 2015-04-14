@@ -1,6 +1,6 @@
 {
   "name": "ng-sails",
-  "version": "0.2.1",
+  "version": "0.2.1a",
   "description": "Bind a sails model to an Angular model with full CRUD support",
   "repository": {
     "type": "git",

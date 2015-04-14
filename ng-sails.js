@@ -15,7 +15,7 @@ angular.module('ngSails', []).factory('$sails', ['$q',
 			this.model = model || '';
 			this.scope = scope || {};
 			this.params = {
-				limit:30,
+				limit:1000,
 				skip:0,
 				sort:'id desc'
 			}
@@ -30,7 +30,7 @@ angular.module('ngSails', []).factory('$sails', ['$q',
 					if (this.params.sort === "id desc" && this.params.skip === 0) {
 						this.scope[this.model].data.unshift(response.data);
 						if (this.scope[this.model].data.length > ~~this.params.limit) {
-							this.scope[this.model].data = this.scope[this.model].slice(0,Math.max(this.params.limit,0));
+							this.scope[this.model].data = this.scope[this.model].data.slice(0,Math.max(this.params.limit,0));
 						}
 					}
 					break;
