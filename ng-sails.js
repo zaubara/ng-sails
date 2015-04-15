@@ -1,6 +1,6 @@
 angular.module('ngSails', []).factory('$sails', ['$q',
 	function($q) {
-		var $sails = function(model, scope, params, prefix, suffix) {
+		var $sails = function(model, scope, params, prefix, suffix, subscribed) {
 			if (!io) throw "Can't see socket.io in the global scope?";
 			if(prefix && typeof prefix != 'undefined')
 				this.prefix = '/'+prefix+'/';
@@ -14,6 +14,8 @@ angular.module('ngSails', []).factory('$sails', ['$q',
 
 			this.model = model || '';
 			this.scope = scope || {};
+			if (typeof subscribed === 'undefined')
+				subscribed = true;
 			this.params = {
 				limit:1000,
 				skip:0,
@@ -21,7 +23,7 @@ angular.module('ngSails', []).factory('$sails', ['$q',
 			}
 			if (params) angular.extend(this.params,params);
 			this.data = {};
-			this.hardFetch(true);
+			this.hardFetch(subscribed);
 		};
 
 		$sails.prototype.responseHandler = function(response) {
@@ -73,7 +75,7 @@ angular.module('ngSails', []).factory('$sails', ['$q',
 						verb = "destroyed"
 						break;
 				}
-				console.log(verb, id, data);
+				//console.log(verb, id, data);
 				if (verb) this.responseHandler({verb:verb, id:data.id, data:data});
 				if (response.statusCode == 200) {
 					q.resolve(data);
@@ -86,14 +88,14 @@ angular.module('ngSails', []).factory('$sails', ['$q',
 
 		$sails.prototype.hardFetch = function(subscribe) {
 			io.socket.request(this.prefix+this.model+this.suffix, this.params, function(response) {
-				console.log(this.prefix, this.model, this.params, response);
+				//console.log(this.prefix, this.model, this.params, response);
 				if ('function' === typeof response.reverse) {
 					//console.log('reverse called');
 					response.reverse();
 					this.scope[this.model].data = response;
 				} else {
 					//console.log('reverse NOT called');
-					this.scope[this.model].data = [response];
+					this.scope[this.model].data = response;
 				}
 				if (subscribe) this.subscribe();
 				this.scope.$apply();
@@ -102,6 +104,7 @@ angular.module('ngSails', []).factory('$sails', ['$q',
 		};
 
 		$sails.prototype.subscribe = function() {
+			//console.log('subbed', this.model);
 			io.socket.on(this.model, this.responseHandler.bind(this));
 			return this;
 		};
