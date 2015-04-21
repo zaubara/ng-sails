@@ -1,7 +1,7 @@
 angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 	function($q,$rootScope) {
 
-		var $sails = function(sailsmodel, angularmodel, $scope) {
+		var $sails = function(sailsmodel, angularmodel, $scope, params, subscribe) {
 			this.length = 0;
 			(function(sailsmodel, angularmodel, $scope) {
 				if (!sailsmodel && !angularmodel) return;
@@ -16,12 +16,15 @@ angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 					onsubscribe:[]
 				};
 				this.params = {
-					limit:30,
+					limit:300,
 					skip:0,
 					sort:'id desc'
 				};
+				if (params) angular.extend(this.params,params);
 				this.scope = $scope;
-				this.fetch(true);
+				if (typeof subscribe !== 'undefined') this.fetch(subscribe);
+				else this.fetch(true);
+
 			}.bind(this))(sailsmodel, angularmodel, $scope);
 		}
 
@@ -62,6 +65,7 @@ angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 			return this;
 		};
 		$sails.prototype.fetch = function(subscribe) {
+			//console.log('subscribe: ', this.api, subscribe);
 			if (!this.api) return;
 			io.socket.request((this.api.substr(0,1)!=="/"?'/':'')+this.api, this.params, function(response) {
 				this.scope[this.model].length = 0;
@@ -87,7 +91,7 @@ angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 			var q = $q.defer(),
 				object = object || {},
 				method = (typeof method === "string"?method:"get").toLowerCase();
-				io.socket[method](this.api+(id?'/'+id:''),object,function(data,response) {
+				io.socket[method]('/'+this.api+(id?'/'+id:''),object,function(data,response) {
 					var verb = false;
 					switch (method) {
 						case "post":
@@ -101,7 +105,8 @@ angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 							break;
 					}
 					if (verb) this.responseHandler({verb:verb, id:data.id, data:data});
-					if (response.status == 200) return q.resolve(data);
+					if (response.statusCode == 200) return q.resolve(data);
+					else console.log(data, response);
 					q.reject(data);
 				}.bind(this));
 			return q.promise;
