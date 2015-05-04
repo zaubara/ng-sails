@@ -25,6 +25,8 @@ angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 				if (typeof subscribe !== 'undefined') this.fetch(subscribe);
 				else this.fetch(true);
 
+				console.log('ngsails: ', this.api, this.model);
+
 			}.bind(this))(sailsmodel, angularmodel, $scope);
 		}
 
@@ -39,18 +41,22 @@ angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 		$sails.prototype.concat = function () { return Array.prototype.concat.apply(this.slice(), arguments);};
 		$sails.prototype.responseHandler = function(response) {
 			this.scope[this.model] = this.scope[this.model] || [];
+			console.log('responseHandler called', response, this.scope[this.model], this.model, this.api);
 			switch(response.verb) {
 				case "created":
 					if (this.params.sort === 'id desc' && this.params.skip === 0) {
+						//console.log('created ngsails: ', response.data);
 						this.scope[this.model].unshift(response.data);
 						if (this.scope[this.model].length > ~~this.params.limit) this.scope[this.model] = this.scope[this.model].slice(0,Math.max(this.params.limit,0));
 					}
 					break;
 
 				case "updated":
+					var updateFound = false;
 					this.scope[this.model].forEach(function(item) {
-						if (item.id == response.id) angular.extend(item,response.data);
+						if (item.id == response.id) { angular.extend(item,response.data); updateFound = true; }
 					}.bind(this));
+					if (!updateFound) this.fetch(false);
 					break;
 
 				case "destroyed":
@@ -77,7 +83,14 @@ angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 			return this;
 		};
 		$sails.prototype.subscribe = function() {
-			io.socket.on(this.model, this.responseHandler.bind(this));
+			//console.log('subscribe:', this.model, this.api, this.api.split('/')[0]);
+			io.socket.on(this.api.split('/')[0], this.responseHandler.bind(this));
+			this.hooks.onsubscribe.forEach(function(hook) { hook(); });
+			return this;
+		}
+		$sails.prototype.subscribeUrl = function(url) {
+			//console.log('subscribe:', this.model, url);
+			io.socket.on(url, this.responseHandler.bind(this));
 			this.hooks.onsubscribe.forEach(function(hook) { hook(); });
 			return this;
 		}
@@ -88,10 +101,11 @@ angular.module('ngSails', []).factory('$sails', ['$q','$rootScope',
 			return this;
 		};
 		$sails.prototype.crud = function(method, object, id) {
+			//console.log('crud: ', method, this.model);
 			var q = $q.defer(),
 				object = object || {},
 				method = (typeof method === "string"?method:"get").toLowerCase();
-				io.socket[method]('/'+this.api+(id?'/'+id:''),object,function(data,response) {
+				io.socket[method]((this.api.substr(0,1)!=="/"?'/':'')+this.api+(id?'/'+id:''),object,function(data,response) {
 					var verb = false;
 					switch (method) {
 						case "post":
